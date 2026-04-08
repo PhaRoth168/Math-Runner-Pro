@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <title>TV Display - Math Battle Final</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { 
+            background: #020617; 
+            color: white; 
+            font-family: 'Khmer OS Battambang'; 
+            text-align: center; 
+            margin: 0; 
+            overflow: hidden; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        
+        /* ផ្នែក Status ខាងលើបង្អស់ */
+        #status-top { 
+            font-size: 45px; 
+            color: #38bdf8; 
+            font-weight: bold; 
+            position: absolute; 
+            top: 8%; 
+            width: 100%; 
+        }
+
+        /* សញ្ញា ??? រុញចុះមកក្រោមបន្តិចតាមរូបភាព */
+        #display-text { 
+            font-size: 250px; 
+            font-weight: bold; 
+            color: #38bdf8; 
+            margin-top: 50px; 
+            min-height: 450px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+
+        /* ប៊ូតុងបង្ហាញចម្លើយ ពណ៌បៃតង ស្ថិតនៅខាងក្រោមសញ្ញាសួរ */
+        #btn-reveal { 
+            display: none; 
+            padding: 20px 80px; 
+            font-size: 35px; 
+            background: #22c55e; 
+            color: white; 
+            border: none; 
+            border-radius: 15px; 
+            cursor: pointer; 
+            font-family: 'Khmer OS Battambang'; 
+            font-weight: bold; 
+            margin-top: 30px;
+            box-shadow: 0 10px 25px rgba(34, 197, 94, 0.4);
+            transition: 0.3s;
+        }
+        #btn-reveal:hover { background: #16a34a; transform: scale(1.05); }
+
+        /* ផ្ទាំងបង្ហាញចម្លើយក្នុងរង្វង់ */
+        #ans-view { display: none; }
+        .ans-circle { 
+            width: 450px; 
+            height: 450px; 
+            border: 25px solid #10b981; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 240px; 
+            color: #10b981; 
+            background: rgba(16, 185, 129, 0.1);
+            box-shadow: 0 0 100px rgba(16, 185, 129, 0.4);
+        }
+
+        .count-down { color: #ef4444; animation: zoom 1s infinite; }
+        @keyframes zoom { 0% { transform: scale(1.3); } 100% { transform: scale(0.9); opacity: 0.5; } }
+    </style>
+</head>
+<body>
+
+    <div id="status-top">រង់ចាំការបញ្ជា...</div>
+    
+    <div id="main-stage">
+        <div id="display-text">?</div>
+        <button id="btn-reveal" onclick="showFinalResult()">👁️ បង្ហាញចម្លើយ</button>
+    </div>
+
+    <div id="ans-view">
+        <div style="font-size: 50px; margin-bottom: 30px; color: #10b981;">ចម្លើយពិតប្រាកដគឺ៖</div>
+        <div class="ans-circle" id="result-num">0</div>
+        <br>
+        <button style="background:none; border:1px solid #334155; color:#64748b; padding:12px 25px; border-radius:10px; cursor:pointer;" onclick="location.reload()">🔄 ត្រលប់ក្រោយ</button>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBkYNb2QivWX9NpVjzpo5TmyYIxU6xMR4I",
+            databaseURL: "https://myperfumeshop-5b660-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let answerFromAdmin = 0;
+
+        // ស្ដាប់ទិន្នន័យពី Firebase
+        db.ref("mathGame/control").on("value", snap => {
+            const data = snap.val();
+            if(!data || data.action !== "start") return;
+            
+            answerFromAdmin = data.total; // ទទួលចម្លើយដែល Admin បញ្ចូល
+            resetUI();
+            runSequence(data.numbers, data.speed);
+        });
+
+        async function runSequence(nums, speed) {
+            const box = document.getElementById('display-text');
+            const status = document.getElementById('status-top');
+
+            // ១. រាប់ថយក្រោយ 3-2-1
+            status.innerText = "ត្រៀមខ្លួន...";
+            box.classList.add('count-down');
+            box.style.color = "#ef4444";
+            for(let i = 3; i >= 1; i--) {
+                box.innerText = i;
+                await new Promise(r => setTimeout(r, 1000));
+            }
+            box.classList.remove('count-down');
+
+            // ២. បង្ហាញលេខរត់
+            status.innerText = "លេខកំពុងរត់...";
+            for(let n of nums) {
+                box.innerText = (n > 0 ? "+" : "") + n;
+                box.style.color = n > 0 ? "#eab308" : "#f87171"; 
+                await new Promise(r => setTimeout(r, speed));
+                box.innerText = "";
+                await new Promise(r => setTimeout(r, 150));
+            }
+
+            // ៣. បង្ហាញសញ្ញា ??? និងប៊ូតុងចុចមើលចម្លើយ
+            box.innerText = "???";
+            box.style.color = "#38bdf8";
+            status.innerText = "សូមសរសេរចម្លើយលើក្ដារឥឡូវនេះ!";
+            document.getElementById('btn-reveal').style.display = "inline-block";
+        }
+
+        // បង្ហាញចម្លើយដែលបានមកពី Admin
+        function showFinalResult() {
+            document.getElementById('main-stage').style.display = "none";
+            document.getElementById('ans-view').style.display = "block";
+            document.getElementById('result-num').innerText = answerFromAdmin;
+            document.getElementById('status-top').innerText = "ផ្ទៀងផ្ទាត់លទ្ធផល!";
+        }
+
+        function resetUI() {
+            document.getElementById('ans-view').style.display = "none";
+            document.getElementById('main-stage').style.display = "block";
+            document.getElementById('btn-reveal').style.display = "none";
+            document.getElementById('display-text').innerText = "?";
+            document.getElementById('display-text').style.color = "white";
+        }
+    </script>
+</body>
+</html>
